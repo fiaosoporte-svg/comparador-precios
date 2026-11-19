@@ -1,0 +1,25 @@
+# Blueprint de Render: en el panel de Render elige "New > Blueprint" y apunta a este repositorio.
+# Las variables marcadas con sync: false se escriben a mano en el panel (son secretas).
+services:
+  - type: web
+    name: comparador-precios-api
+    runtime: node
+    rootDir: api
+    plan: free             # gratis: se duerme a los 15 min sin tráfico (las tareas programadas se pausan); "starter" lo mantiene despierto
+    region: oregon
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /salud
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: TAREAS_PROGRAMADAS
+        value: "true"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: ADMIN_TOKEN
+        generateValue: true
+      - key: API_KEY_APP
+        generateValue: true

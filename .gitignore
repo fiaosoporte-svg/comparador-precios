@@ -1,0 +1,10 @@
+node_modules/
+.env
+*.log
+supabase/.temp/
+.dart_tool/
+build/
+
+# Solo se publica la API: la app Flutter y los prototipos quedan en el PC
+app/
+scripts_prototipo/
