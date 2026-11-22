@@ -9,7 +9,7 @@ const MAX_REFS_MEGAREDIL = 4;   // tope de categorías de Megaredil a descargar 
 const MAX_PRODUCTOS_REF = 150;  // categorías "padre" enormes no se descargan en vivo (sus productos están en las hijas)
 const UNIDAD: Record<string, string> = { "100g": "g", "100ml": "ml", unidad: "un" };
 
-const COLUMNAS = "id, tienda_id, nombre, marca, codigo_barras, categoria_id, precio, precio_regular, promo, cantidad, unidad, precio_comparable, disponible, vigente_desde, vigente_hasta, imagen_url, url, actualizado_en";
+const COLUMNAS = "id, tienda_id, nombre, marca, codigo_barras, categoria_id, precio, precio_regular, promo, cantidad, unidad, precio_comparable, disponible, vigente_desde, vigente_hasta, precio_desde, oferta_desde, imagen_url, url, actualizado_en";
 
 type ConVigencia = { vigente_desde?: string | null; vigente_hasta?: string | null; actualizado_en?: string };
 

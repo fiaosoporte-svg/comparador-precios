@@ -41,6 +41,10 @@ export function parsearPagina(pagina: string, slug: string): ProductoFila[] {
     const ean = imagen?.match(/\/(\d{8,14})[^/]*\.(?:jpe?g|png|webp)/i)?.[1] ?? null;
     const tam = tamanoTarjeta(tamTxt, nombre);
     const p = Math.round(Number(precio));
+    // en oferta la tarjeta trae el precio anterior tachado (<del>$9.000</del>) y el porcentaje (-20%)
+    const antes = Number(cuerpo.match(/<del>\s*\$\s*([\d.]+)\s*<\/del>/)?.[1]?.replace(/\./g, "") ?? 0);
+    const regular = antes > p ? antes : null;
+    const pct = cuerpo.match(/class="item-discount">\s*<strong>\s*-?(\d+)/)?.[1];
     filas.push({
       tienda_id: "megaredil",
       id_externo: id,
@@ -53,8 +57,8 @@ export function parsearPagina(pagina: string, slug: string): ProductoFila[] {
       cantidad: tam?.cantidad ?? null,
       unidad: tam?.unidad ?? null,
       precio: p,
-      precio_regular: null,
-      promo: desc === "true" ? "Descuento" : null,
+      precio_regular: regular,
+      promo: regular ? `${pct ?? Math.round((1 - p / regular) * 100)}% dcto` : desc === "true" ? "Descuento" : null,
       precio_comparable: precioComparable(p, tam),
       disponible: disp === "In stock",
       imagen_url: imagen,
