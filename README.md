@@ -77,6 +77,7 @@ Todas las rutas de la app requieren el header `x-api-key: <API_KEY_APP>`.
 | GET | `/productos/:id/historial` | Cambios de precio |
 | GET | `/tiendas/estado` | Última actualización de cada tienda |
 | GET | `/promociones?tienda=ara&vence_en_dias=2` | Promociones con fecha de vigencia, las que vencen primero |
+| GET | `/ara/folleto` | Dirección del folleto semanal de Ara (PDF); la app lo descarga y lo muestra página por página |
 | GET | `/app/version?build=3` | ¿Hay versión nueva de la app? (sin clave) |
 | GET | `/descargar` | Página para instalar la app desde el celular (sin clave) |
 | POST | `/admin/actualizar/d1` · `/megaredil?lote=8` · `/ara?forzar=true` · `/admin/revisar-vencimientos` | Actualización manual (header `x-admin-token`) |
@@ -133,7 +134,16 @@ Cada producto de la API trae:
 
 La tarea de vencimientos (cada 15 min) marca como no disponibles las ofertas vencidas y busca el folleto nuevo.
 
-## Folleto de Ara sin IA
+## Folleto de Ara: se muestra tal cual
+
+Ara no publica catálogo, solo un folleto semanal en PDF. La API solo encuentra su dirección (`/ara/folleto`,
+sin descargarlo) y la app lo descarga una vez y lo muestra página por página con el `PdfRenderer` de Android.
+
+Leer sus precios con OCR (para compararlos por 100 g) necesita ~600 MB y el plan gratis de Render tiene 512 MB,
+así que es opcional: `ARA_OCR=true` (por ejemplo en un PC con la API apuntando a la misma base de datos) y
+`POST /admin/actualizar/ara`.
+
+## Lectura del folleto de Ara con OCR (opcional), sin IA
 
 `api/src/tiendas/ara-pdf.ts` lee el texto real del PDF con su posición y tamaño de letra y empareja cada precio grande
 con el nombre más cercano (detecta "Lleva 6 por", "3x2", "2da unidad", "precio por libra"). Las páginas que son solo

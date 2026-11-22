@@ -78,6 +78,25 @@ export function aFilas(folleto: FolletoLeido, url: string): ProductoFila[] {
     });
 }
 
+// ---------- Folleto para mostrar en la app (sin OCR) ----------
+
+let enCache: { valor: { url: string; semana: number | null; tamano_bytes: number | null }; hasta: number } | null = null;
+
+/**
+ * Dirección del folleto vigente para que la app lo descargue y lo muestre. No descarga ni lee el PDF
+ * (solo consultas HEAD), así que no gasta memoria. Se recuerda 1 hora.
+ */
+export async function folletoVigente() {
+  if (enCache && enCache.hasta > Date.now()) return enCache.valor;
+  const url = await buscarFolletoVigente();
+  if (!url) return null;
+  const r = await fetch(url, { method: "HEAD" }).catch(() => null);
+  const tamano = Number(r?.headers.get("content-length") ?? 0) || null;
+  const valor = { url, semana: semanaDe(url) || null, tamano_bytes: tamano };
+  enCache = { valor, hasta: Date.now() + 60 * 60 * 1000 };
+  return valor;
+}
+
 /** Busca el folleto vigente y, si es nuevo (o forzar), lo procesa. */
 export async function refrescarAra(forzar = false): Promise<{ url: string | null; productos: number; nuevo: boolean }> {
   const url = await buscarFolletoVigente();

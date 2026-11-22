@@ -9,6 +9,12 @@ import { refrescarAra } from "./tiendas/ara.js";
 
 const enCurso = new Set<string>();
 
+/**
+ * Leer el folleto de Ara con OCR necesita ~600 MB: el plan gratis de Render (512 MB) se reinicia.
+ * Por eso es opcional (ARA_OCR=true, por ejemplo en un PC). Sin OCR la app muestra el folleto PDF tal cual.
+ */
+export const araConOcr = () => process.env.ARA_OCR === "true";
+
 /** Evita que una tarea arranque si la anterior del mismo tipo no ha terminado. */
 async function unaALaVez<T>(nombre: string, fn: () => Promise<T>): Promise<T | { omitido: true }> {
   if (enCurso.has(nombre)) return { omitido: true };
@@ -40,6 +46,7 @@ export const actualizarMegaredil = (lote = 8) =>
     return { categorias: refs, productos: await refrescarMegaredil(refs) };
   });
 
+/** Lee el folleto de Ara con OCR y guarda sus ofertas (solo con ARA_OCR=true). */
 export const actualizarAra = (forzar = false) => unaALaVez("ara", () => refrescarAra(forzar));
 
 /**
@@ -61,7 +68,7 @@ export const revisarVencimientos = () =>
       await db().from("productos").update({ disponible: false }).in("id", araVencidas.map((p) => p.id));
     }
     let ara: unknown = null;
-    if (araVencidas.length || (vencenHoy ?? 0) > 0) ara = await actualizarAra().catch((e) => ({ error: String(e) }));
+    if (araConOcr() && (araVencidas.length || (vencenHoy ?? 0) > 0)) ara = await actualizarAra().catch((e) => ({ error: String(e) }));
 
     const otras = (vencidas ?? []).filter((p) => p.tienda_id !== "ara" && p.categoria_tienda_ref);
     const refsD1 = [...new Set(otras.filter((p) => p.tienda_id === "d1").map((p) => p.categoria_tienda_ref as string))];
@@ -74,7 +81,11 @@ export const revisarVencimientos = () =>
 export function iniciarTareas() {
   cron.schedule("*/30 * * * *", () => void actualizarD1().catch(() => {}));       // D1 completo cada 30 min
   cron.schedule("*/5 * * * *", () => void actualizarMegaredil().catch(() => {})); // Megaredil: 8 categorías cada 5 min
-  cron.schedule("15 * * * *", () => void actualizarAra().catch(() => {}));        // Ara: busca folleto nuevo cada hora
   cron.schedule("*/15 * * * *", () => void revisarVencimientos().catch(() => {})); // vencimientos: cada 15 min
+  if (!araConOcr()) {
+    console.log("[tareas] programadas: D1 cada 30 min, Megaredil cada 5 min, vencimientos cada 15 min (Ara: solo folleto PDF)");
+    return;
+  }
+  cron.schedule("15 * * * *", () => void actualizarAra().catch(() => {}));        // Ara: busca folleto nuevo cada hora
   console.log("[tareas] programadas: D1 cada 30 min, Megaredil cada 5 min, Ara cada hora, vencimientos cada 15 min");
 }

@@ -49,7 +49,8 @@ function esNombre(t: Texto): boolean {
 }
 
 async function textosPorPagina(pdf: Uint8Array): Promise<Texto[][]> {
-  const doc = await getDocument({ data: pdf, verbosity: 0 }).promise;
+  const carga = getDocument({ data: pdf, verbosity: 0 });
+  const doc = await carga.promise;
   const paginas: Texto[][] = [];
   for (let n = 1; n <= doc.numPages; n++) {
     const page = await doc.getPage(n);
@@ -71,9 +72,24 @@ async function textosPorPagina(pdf: Uint8Array): Promise<Texto[][]> {
       textos.push({ s: limpio, x0: x, x1, y0: y1 - h, y1, h, cx: (x + x1) / 2, cy: y1 - h / 2 });
     }
     // Página que es solo imagen (sin texto en el PDF): OCR
-    paginas.push(textos.length >= 15 ? textos : await textosPorOCR(doc, n));
+    if (textos.length >= 15) {
+      paginas.push(textos);
+    } else {
+      paginas.push(await textosPorOCR(doc, n));
+      // El plan gratis de Render tiene 512 MB: después de cada página con OCR se libera todo
+      // (la memoria del motor de OCR solo crece mientras viva, y las imágenes de la página son grandes).
+      await cerrarOCR();
+    }
+    page.cleanup();
+    liberarMemoria();
   }
+  await carga.destroy();
   return paginas;
+}
+
+/** Fuerza la recolección de basura si Node se inició con --expose-gc (ver package.json). */
+function liberarMemoria() {
+  (globalThis as { gc?: () => void }).gc?.();
 }
 
 /** Convierte lo leído por OCR al mismo formato de los textos del PDF. */

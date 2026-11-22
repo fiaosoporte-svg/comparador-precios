@@ -4,7 +4,8 @@ import { createCanvas, loadImage, Image, SKRSContext2D } from "@napi-rs/canvas";
 import { createWorker, Worker } from "tesseract.js";
 import type { PDFDocumentProxy } from "pdfjs-dist/types/src/display/api.js";
 
-export const ESCALA_OCR = 3; // 3x: ~1750 px de ancho por página, suficiente para los nombres pequeños
+// 3x: ~1750 px de ancho por página, suficiente para los nombres pequeños. Con OCR_ESCALA se baja para gastar menos memoria.
+export const ESCALA_OCR = Number(process.env.OCR_ESCALA ?? 3);
 
 export interface PalabraOCR { s: string; x0: number; y0: number; x1: number; y1: number; linea: number; confianza: number }
 

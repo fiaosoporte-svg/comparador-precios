@@ -10,6 +10,7 @@
 //   GET  /productos/:id/historial            cambios de precio
 //   GET  /tiendas/estado                     última actualización de cada tienda
 //   GET  /promociones?tienda=ara&vence_en_dias=2  promociones con fecha de vigencia
+//   GET  /ara/folleto                        folleto semanal de Ara (PDF) para verlo en la app
 // Rutas públicas (sin clave):
 //   GET  /app/version?build=3                ¿hay versión nueva de la app? (la app lo consulta al abrir)
 //   GET  /descargar                          página para descargar e instalar la app
@@ -19,7 +20,8 @@
 import express, { NextFunction, Request, Response } from "express";
 import { db } from "./db.js";
 import { buscarProductos, compararPorCodigo, historial, NoEncontrado, preciosCategoria, productosPorIds, promociones, similares } from "./precios.js";
-import { actualizarAra, actualizarD1, actualizarMegaredil, iniciarTareas, revisarVencimientos } from "./tareas.js";
+import { actualizarAra, actualizarD1, actualizarMegaredil, araConOcr, iniciarTareas, revisarVencimientos } from "./tareas.js";
+import { folletoVigente } from "./tiendas/ara.js";
 import { CARPETA_DESCARGAS, estadoActualizacion, paginaDescarga } from "./versiones.js";
 
 const app = express();
@@ -132,12 +134,23 @@ app.get("/promociones", app_, async (req, res) => {
   res.json({ ok: true, promociones: await promociones({ tienda: req.query.tienda as string | undefined, venceEnDias: dias }) });
 });
 
+// --- folleto de Ara ---
+// Ara no publica catálogo: solo un folleto semanal en PDF. Aquí solo se busca su dirección (sin descargarlo
+// ni leerlo con OCR); la app lo descarga y lo muestra página por página.
+app.get("/ara/folleto", app_, async (_req, res) => {
+  const f = await folletoVigente();
+  if (!f) return res.status(404).json({ ok: false, error: "Ara no tiene folleto publicado en este momento" });
+  res.json({ ok: true, ...f });
+});
+
 // --- administración ---
 app.post("/admin/actualizar/d1", admin, async (_req, res) => res.json({ ok: true, resultado: await actualizarD1() }));
 app.post("/admin/actualizar/megaredil", admin, async (req, res) =>
   res.json({ ok: true, resultado: await actualizarMegaredil(Math.min(Number(req.query.lote ?? 8), 30)) }));
-app.post("/admin/actualizar/ara", admin, async (req, res) =>
-  res.json({ ok: true, resultado: await actualizarAra(req.query.forzar === "true") }));
+app.post("/admin/actualizar/ara", admin, async (req, res) => {
+  if (!araConOcr()) return res.status(409).json({ ok: false, error: "OCR de Ara desactivado (ARA_OCR=true para activarlo; necesita ~600 MB)" });
+  res.json({ ok: true, resultado: await actualizarAra(req.query.forzar === "true") });
+});
 app.post("/admin/revisar-vencimientos", admin, async (_req, res) => res.json({ ok: true, resultado: await revisarVencimientos() }));
 
 // --- errores (Express 5 captura los errores de funciones async) ---
