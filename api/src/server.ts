@@ -10,7 +10,8 @@
 //   GET  /productos/:id/historial            cambios de precio
 //   GET  /tiendas/estado                     última actualización de cada tienda
 //   GET  /promociones?tienda=ara&vence_en_dias=2  promociones con fecha de vigencia
-//   GET  /ara/folleto                        folleto semanal de Ara (PDF) para verlo en la app
+//   GET  /descuentos                         descuentos por convenio según el día (Comfenalco en Megaredil)
+//   GET  /ara/folleto                       folleto semanal de Ara (PDF) para verlo en la app
 // Rutas públicas (sin clave):
 //   GET  /app/version?build=3                ¿hay versión nueva de la app? (la app lo consulta al abrir)
 //   GET  /descargar                          página para descargar e instalar la app
@@ -22,6 +23,7 @@ import { db } from "./db.js";
 import { buscarProductos, compararPorCodigo, historial, NoEncontrado, preciosCategoria, productosPorIds, promociones, similares } from "./precios.js";
 import { actualizarAra, actualizarD1, actualizarMegaredil, araConOcr, iniciarTareas, revisarVencimientos } from "./tareas.js";
 import { folletoVigente } from "./tiendas/ara.js";
+import { PROGRAMAS } from "./descuentos.js";
 import { CARPETA_DESCARGAS, estadoActualizacion, paginaDescarga } from "./versiones.js";
 
 const app = express();
@@ -133,6 +135,11 @@ app.get("/tiendas/estado", app_, async (_req, res) => {
 app.get("/promociones", app_, async (req, res) => {
   const dias = req.query.vence_en_dias !== undefined ? Number(req.query.vence_en_dias) : undefined;
   res.json({ ok: true, promociones: await promociones({ tienda: req.query.tienda as string | undefined, venceEnDias: dias }) });
+});
+
+// --- descuentos por convenio (Comfenalco en Megaredil...) que la app aplica según el día de compra ---
+app.get("/descuentos", app_, (_req, res) => {
+  res.json({ ok: true, programas: PROGRAMAS });
 });
 
 // --- folleto de Ara ---
