@@ -111,6 +111,27 @@ const POR_CATEGORIA_TIENDA: Record<string, string> = {
   "aperitivos-y-pasabocas": "congelados", "pizzas-y-productos-horneables": "congelados",
   jamon: "embutidos", salchichas: "embutidos", chorizos: "embutidos",
   megafruver: "frutas_verduras",
+  // Todorapidas
+  "insumos-panaderia": "harinas", panaderias: "harinas", esencias: "harinas", almidones: "harinas", "harina-de-trigo": "harinas",
+  conservas: "salsas", condimentos: "salsas", aderezos: "salsas", salsas: "salsas", "salsas-institucionales": "salsas", "cremas-cocina": "salsas",
+  hogar: "hogar_desechables", portacomidas: "hogar_desechables", "portacomidas-papel-y-carton": "hogar_desechables", bolsas: "hogar_desechables",
+  desechables: "hogar_desechables", aluminios: "hogar_desechables", palos: "hogar_desechables", bandejas: "hogar_desechables", pitillos: "hogar_desechables",
+  aseo: "limpiadores", "blanqueadores-y-ambientadores": "limpiadores",
+  "detergentes-polvo-liquido-y-barra": "detergente", "suavizantes-y-quitamanchas": "suavizante",
+  snacks: "snacks", confites: "snacks", dulces: "snacks", bocadillos: "snacks", "bocadillos-industriales": "snacks", chocolates: "snacks",
+  "papa-perros": "snacks", arequipes: "snacks", "tortas-y-ponques": "snacks",
+  "micheladas-y-granizados": "jugos", pulpas: "jugos", "todorapidas-bebidas": "jugos", "refrescos-en-polvo": "jugos", te: "jugos",
+  "todorapidas-energizantes": "jugos", "todorapidas-gaseosas": "gaseosas", licores: "cerveza",
+  "cremas-de-dientes": "crema_dental", "cepillos-de-dientes": "cuidado_bucal", "maquinas-de-afeitar": "afeitada",
+  "toallas-higienicas-panitos-y-panales": "toallas_higienicas", "shampoo-acond-y-cremas-de-peinar": "shampoo",
+  "jabon-de-bano": "jabon", desodorantes: "desodorante",
+  pollo: "pollo", carne: "res", "carne-cerdo": "cerdo", "cabano-y-peperoni": "embutidos", especialidades: "embutidos",
+  congelados: "congelados", "comidas-rapidas": "congelados",
+  "derivados-lacteos": "yogur", yogures: "yogur", quesos: "quesos", "leche-en-polvo": "leche_polvo",
+  "bebidas-en-polvo": "chocolate", "cafe-y-chocolate": "cafe",
+  galletas: "galletas", pan: "pan", "pasta-empanadas-y-flautas": "pan",
+  "cereales-desayuno-y-avena": "cereales", "papel-higienico-y-toallas": "toallas_cocina",
+  "legumbres-y-hortalizas": "frutas_verduras",
 };
 
 const sinUuid = (slug: string) => slug.replace(/-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "");
