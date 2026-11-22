@@ -51,6 +51,13 @@ const REGLAS: Regla[] = [
   ["desodorante", ["desodorante", "antitranspirante"]],
   ["toallas_higienicas", ["toalla higienica", "toallas higienicas", "toallas nosotras", "protector diario", "protectores diarios", "tampon"]],
   ["panales", ["panal", "panales", "pañal", "pañales", "pañitos", "panitos", "toallitas humedas"]],
+  ["cuidado_bucal", ["cepillo dental", "cepillo de dientes", "cepillos dentales", "enjuague bucal", "enjuage bucal", "seda dental", "hilo dental", "listerine"]],
+  ["afeitada", ["maquina de afeitar", "maquina afeitar", "prestobarba", "rasuradora", "espuma de afeitar", "espuma gillette", "gel de afeitar", "gillete gel", "gillette gel", "gillette mach", "gillette prestobarba", "repuesto maquina", "rpuesto maquina", "after shave", "cuchilla"]],
+  ["cuidado_capilar", ["tinte", "tratamiento capilar", "tratamiento ", "mascarilla capilar", "gel para el cabello", "gel ego", "gel fijador", "cera para el cabello", "keratina"]],
+  ["cuidado_piel", ["crema corporal", "crema para manos", "crema piel", "crema facial", "crema antiarrugas", "talco", "bloqueador", "protector solar", "vaselina", "locion corporal"]],
+  ["hogar_desechables", ["bolsa de basura", "bolsas de basura", "bolsa aseo", "bolsa negra", "esponja", "esponjilla", "guante", "escoba", "trapero", "recogedor", "papel aluminio", "pelicula plastica", "papel autosellante", "vaso desechable", "vasos", "plato desechable", "plato blanco", "cuchara", "tenedor", "palillo", "pila ", "pilas ", "bombillo", "luz led", "encendedor", "fosforos", "pano ", "paño "]],
+  ["congelados", ["helado", "empanada", "pizza", "tamal", "croqueta", "lasana congelada", "papa francesa", "papas francesas", "filete de salmon", "filete de tilapia", "filete de trucha", "camaron", "mixtura"]],
+  ["drogueria", ["suero oral", "acetaminofen", "ibuprofeno", "alcohol antiseptico", "alcohol jgb", "algodon", "ensure", "pedialyte", "glucerna", "pediasure", "curitas", "gasa", "tapabocas"]],
   ["mascotas", ["alimento para perro", "alimento para gato", "comida para", "arena para gato", "cat chow", "dog chow", "chunky", "dogourmet", "gatsy", "pedigree", "whiskas", "purina", "max cat", "gatush", "comedero", "snack para perro", "agility", "br for"]],
   ["frutas_verduras", ["banano", "platano", "papa pastusa", "papa criolla", "papa sabanera", "tomate", "cebolla", "zanahoria", "limon", "naranja", "mandarina", "manzana", "paquete de manzana", "pera ", "mango", "aguacate", "pina", "papaya", "fresa", "mora ", "lulo", "maracuya", "guayaba", "uva", "pepino", "pimenton", "lechuga", "repollo", "brocoli", "cilantro", "yuca", "ahuyama", "habichuela", "remolacha", "apio", "granadilla", "patilla", "melon", "malla de"], ["jugo", "salsa", "pasta de tomate", "mermelada", "sabor", "gelatina"]],
 ];
@@ -60,9 +67,55 @@ const CONTIENE: [string, string[]][] = [
   ["frutas_verduras", ["megafruver"]],
   ["pan", ["megapan"]],
   ["mascotas", [" para perro", " para gato", "mascota"]],
+  ["desodorante", [" desodorante", " antitranspirante"]],
+  ["shampoo", [" shampoo", " acondicionador", " champu"]],
+  ["crema_dental", [" crema dental"]],
+  ["cuidado_bucal", [" cepillo dental", " enjuague bucal", " seda dental"]],
+  ["detergente", [" detergente", " desmanchador"]],
+  ["suavizante", [" suavizante"]],
+  ["lavaloza", [" lavaloza", " lava loza", " lavaplatos"]],
 ];
 
-export function categorizar(nombre: string): string {
+/**
+ * Cuando el nombre no basta (empieza por la marca: "Pantene Shampoo..."), se usa la categoría de la tienda.
+ * Claves: slug de Megaredil sin el sufijo de UUID que traen algunas ("perros-828f123b-...").
+ */
+const POR_CATEGORIA_TIENDA: Record<string, string> = {
+  perros: "mascotas", gatos: "mascotas",
+  "cuidado-capilar-shampoo": "shampoo", tratamientos: "cuidado_capilar", "tintes-cabello": "cuidado_capilar",
+  "cepillos-dentales": "cuidado_bucal", "enjuage-bucal": "cuidado_bucal", "ceda-dental": "cuidado_bucal",
+  "afeitada-hombre": "afeitada", "afeitada-mujer": "afeitada",
+  "cuidado-piel": "cuidado_piel", "talco-pies": "cuidado_piel", "talcos-polvo": "cuidado_piel",
+  "jabones-barra": "jabon", "jabones-liquidos": "jabon",
+  protectores: "toallas_higienicas", "toallas-higienicas": "toallas_higienicas",
+  panales: "panales", panitos: "panales", "aseo-infantil": "panales",
+  drogueria: "drogueria", "medicamentos-otc": "drogueria", "gel-antibacterial": "drogueria",
+  "sal-y-condimentos": "salsas", "salsas-y-sazonadoras": "salsas", encurtidos: "salsas", "sopas-cremas-caldos-y-bases": "salsas",
+  panaderia: "pan", megapanaderia: "pan", "pasta-para-flauta-y-pasta-para-empanada": "pan",
+  "panaderia-y-pasteleria": "harinas", "reposteria-megaredil": "harinas",
+  "pasabocas-megaredil": "snacks", confiteria: "snacks", "dulces-tipicos": "snacks", masmelos: "snacks",
+  "lacteos-megaredil": "yogur", "quesos-megaredil": "quesos", "leches-liquidas": "leche",
+  "alimento-lacteo": "leche_polvo", "leche-en-polvo-megaredil": "leche_polvo", "huevos-megaredil": "huevos",
+  "galletas-crema": "galletas", "galletas-saludables": "galletas", "galletas-megaredil": "galletas",
+  "gaseosas-megaredil": "gaseosas", "te-liquido": "jugos", bebidas: "jugos", "bebidas-jugos-hit-saviloe": "jugos", agua: "agua",
+  "cafe-chocolate-aromaticas-y-te": "cafe", aromaticas: "cafe", coladas: "cereales", "pastas-megaredil": "pastas",
+  "limpieza-cocina": "lavaloza", "ambientadores-megaredil": "limpiadores", desinfectantes: "limpiadores",
+  "desengrasantes-casa": "limpiadores", insecticidas: "limpiadores", "aseo-hogar-megaredil": "limpiadores",
+  desmanchadores: "detergente", "desmanchadores-telas": "detergente", "cuidado-telas": "detergente",
+  "servilletas-y-toallas-cocina": "toallas_cocina",
+  "implementos-hogar": "hogar_desechables", esponjillas: "hogar_desechables", "bolsas-aseo": "hogar_desechables",
+  "escobas-traperos-mechas": "hogar_desechables", guantes: "hogar_desechables", panos: "hogar_desechables",
+  aluminio: "hogar_desechables", vinipel: "hogar_desechables", platos: "hogar_desechables", vasos: "hogar_desechables",
+  cubiertos: "hogar_desechables", "palillos-pinchos-paletas": "hogar_desechables", "hogar-megaredil": "hogar_desechables",
+  helados: "congelados", "pescados-congelados": "congelados", precocidos: "congelados", "papas-y-acompanamientos": "congelados",
+  "aperitivos-y-pasabocas": "congelados", "pizzas-y-productos-horneables": "congelados",
+  jamon: "embutidos", salchichas: "embutidos", chorizos: "embutidos",
+  megafruver: "frutas_verduras",
+};
+
+const sinUuid = (slug: string) => slug.replace(/-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i, "");
+
+export function categorizar(nombre: string, categoriaTienda?: string | null): string {
   const n = sinTildes(nombre) + " ";
   for (const [id, empieza, excluye = []] of REGLAS) {
     if (empieza.some((p) => n.startsWith(p)) && !excluye.some((x) => n.includes(x))) return id;
@@ -70,5 +123,6 @@ export function categorizar(nombre: string): string {
   for (const [id, palabras] of CONTIENE) {
     if (palabras.some((w) => n.includes(w))) return id;
   }
+  if (categoriaTienda) return POR_CATEGORIA_TIENDA[sinUuid(categoriaTienda)] ?? "otros";
   return "otros";
 }

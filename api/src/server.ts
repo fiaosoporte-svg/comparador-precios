@@ -84,7 +84,8 @@ app.get("/salud", async (_req, res) => {
 
 // --- rutas de la app ---
 app.get("/categorias", app_, async (_req, res) => {
-  const { data, error } = await db().from("categorias").select("*").neq("id", "otros").order("orden");
+  // "Otros productos" va al final (orden 1000): así ningún producto queda sin poder verse
+  const { data, error } = await db().from("categorias").select("*").order("orden");
   if (error) throw error;
   const grupos: Record<string, unknown[]> = {};
   for (const c of data ?? []) (grupos[c.grupo] ??= []).push(c);

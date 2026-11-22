@@ -68,23 +68,36 @@ export async function preciosCategoria(categoria: string, opciones: { forzar?: b
     );
   }
 
-  // 3. productos comparables de la categoría, del más barato al más caro
+  // 3. TODOS los productos disponibles de la categoría. Primero los comparables (con tamaño y en la unidad de la
+  //    categoría) del más barato al más caro por 100 g / 100 ml / unidad; después el resto, por precio.
   const hoy = hoyColombia();
-  const { data: productos, error } = await db()
-    .from("productos")
-    .select(COLUMNAS)
-    .eq("categoria_id", categoria)
-    .eq("disponible", true)
-    .eq("unidad", UNIDAD[cat.unidad_comparacion])
-    .not("precio_comparable", "is", null)
-    .or(`vigente_hasta.is.null,vigente_hasta.gte.${hoy}`)
-    .order("precio_comparable", { ascending: true })
-    .limit(300);
-  if (error) throw error;
+  const unidad = UNIDAD[cat.unidad_comparacion];
+  const filas: Record<string, unknown>[] = [];
+  for (let desde = 0; desde < 3000; desde += 1000) {
+    const { data, error } = await db()
+      .from("productos")
+      .select(COLUMNAS)
+      .eq("categoria_id", categoria)
+      .eq("disponible", true)
+      .or(`vigente_hasta.is.null,vigente_hasta.gte.${hoy}`)
+      .order("id")
+      .range(desde, desde + 999);
+    if (error) throw error;
+    filas.push(...(data ?? []));
+    if ((data ?? []).length < 1000) break;
+  }
 
-  const lista = (productos ?? []).map((p) => conVigencia(p, hoy));
+  const lista = filas
+    .map((p) => {
+      const v = conVigencia(p as ConVigencia & { unidad?: string; precio_comparable?: number | null; precio: number; tienda_id: string }, hoy);
+      return { ...v, comparable: v.unidad === unidad && v.precio_comparable != null };
+    })
+    .sort((a, b) =>
+      a.comparable !== b.comparable ? (a.comparable ? -1 : 1)
+        : a.comparable ? (a.precio_comparable as number) - (b.precio_comparable as number)
+        : a.precio - b.precio);
   const mejorPorTienda: Record<string, unknown> = {};
-  for (const p of lista) mejorPorTienda[p.tienda_id] ??= p;
+  for (const p of lista) if (p.comparable) mejorPorTienda[p.tienda_id] ??= p;
 
   return { categoria: cat, refrescado, mejor_por_tienda: mejorPorTienda, productos: lista };
 }

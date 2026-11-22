@@ -47,7 +47,7 @@ export function parsearPagina(pagina: string, slug: string): ProductoFila[] {
       nombre,
       marca: marca && marca !== "Sin marca" ? marca : null,
       codigo_barras: ean,
-      categoria_id: categorizar(nombre),
+      categoria_id: categorizar(nombre, slug),
       categoria_tienda: slug,
       categoria_tienda_ref: slug,
       cantidad: tam?.cantidad ?? null,
