@@ -64,7 +64,7 @@ export async function paginaDescarga(baseUrl: string): Promise<string> {
   ul{list-style:none;padding:0} li{background:#fff;border-radius:12px;padding:12px 16px;margin:8px 0}
   li span{color:#777;font-size:.85rem;margin-left:8px} li p{margin:6px 0 0;font-size:.9rem;color:#444}
 </style></head><body><main>
-<h1>Comparador de precios</h1><p class="sub">D1 · Megaredil · Ara — Bucaramanga</p>
+<h1>Comparador de precios</h1><p class="sub">D1 · Megaredil · Todorapidas · Ara — Bucaramanga</p>
 ${ultima
     ? `<a class="boton" href="${baseUrl}/descargas/${encodeURIComponent(ultima.archivo)}">Descargar versión ${escapar(ultima.version)}${mb(ultima.tamano_bytes)}</a>
 <div class="ayuda">Al abrir el archivo, Android puede pedir permiso para <b>instalar apps de origen desconocido</b>. Acéptalo solo para tu navegador.

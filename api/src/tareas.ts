@@ -4,7 +4,9 @@
 import cron from "node-cron";
 import { db, hoyColombia } from "./db.js";
 import { refrescarD1 } from "./tiendas/d1.js";
-import { categoriasMasViejas, refrescarMegaredil, sincronizarCategorias } from "./tiendas/megaredil.js";
+import { refrescarMegaredil } from "./tiendas/megaredil.js";
+import { refrescarTodorapidas } from "./tiendas/todorapidas.js";
+import { categoriasMasViejasParze, MEGAREDIL, refrescarParze, sincronizarCategoriasParze, TiendaParze, TODORAPIDAS } from "./tiendas/parze.js";
 import { refrescarAra } from "./tiendas/ara.js";
 
 const enCurso = new Set<string>();
@@ -34,17 +36,23 @@ async function unaALaVez<T>(nombre: string, fn: () => Promise<T>): Promise<T | {
 
 export const actualizarD1 = () => unaALaVez("d1", async () => ({ productos: await refrescarD1() }));
 
-/** Rotación de Megaredil: las N categorías que hace más tiempo no se actualizan. */
-export const actualizarMegaredil = (lote = 8) =>
-  unaALaVez("megaredil", async () => {
-    const { data: marca } = await db().from("refrescos").select("ultimo").eq("tienda_id", "megaredil").eq("ref", "*categorias").maybeSingle();
+/**
+ * Rotación de una tienda Parze (Megaredil, Todorapidas): las N categorías que hace más tiempo no se
+ * actualizan. Una vez al día se vuelve a leer la lista de categorías por si la tienda agregó nuevas.
+ */
+const rotarParze = (tienda: TiendaParze, lote: number) =>
+  unaALaVez(tienda.id, async () => {
+    const { data: marca } = await db().from("refrescos").select("ultimo").eq("tienda_id", tienda.id).eq("ref", "*categorias").maybeSingle();
     if (!marca?.ultimo || Date.now() - Date.parse(marca.ultimo) > 86_400_000) {
-      const slugs = await sincronizarCategorias();
-      await db().from("refrescos").upsert({ tienda_id: "megaredil", ref: "*categorias", ultimo: new Date().toISOString(), productos: slugs.length });
+      const slugs = await sincronizarCategoriasParze(tienda);
+      await db().from("refrescos").upsert({ tienda_id: tienda.id, ref: "*categorias", ultimo: new Date().toISOString(), productos: slugs.length });
     }
-    const refs = (await categoriasMasViejas(lote + 1)).filter((r) => !r.startsWith("*")).slice(0, lote);
-    return { categorias: refs, productos: await refrescarMegaredil(refs) };
+    const refs = (await categoriasMasViejasParze(tienda, lote + 1)).filter((r) => !r.startsWith("*")).slice(0, lote);
+    return { categorias: refs, productos: await refrescarParze(tienda, refs) };
   });
+
+export const actualizarMegaredil = (lote = 8) => rotarParze(MEGAREDIL, lote);
+export const actualizarTodorapidas = (lote = 8) => rotarParze(TODORAPIDAS, lote);
 
 /** Lee el folleto de Ara con OCR y guarda sus ofertas (solo con ARA_OCR=true). */
 export const actualizarAra = (forzar = false) => unaALaVez("ara", () => refrescarAra(forzar));
@@ -72,20 +80,25 @@ export const revisarVencimientos = () =>
 
     const otras = (vencidas ?? []).filter((p) => p.tienda_id !== "ara" && p.categoria_tienda_ref);
     const refsD1 = [...new Set(otras.filter((p) => p.tienda_id === "d1").map((p) => p.categoria_tienda_ref as string))];
-    const refsMega = [...new Set(otras.filter((p) => p.tienda_id === "megaredil").map((p) => p.categoria_tienda_ref as string))];
+    const refsDe = (t: string) => [...new Set(otras.filter((p) => p.tienda_id === t).map((p) => p.categoria_tienda_ref as string))];
+    const refsMega = refsDe("megaredil");
+    const refsTodo = refsDe("todorapidas");
     if (refsD1.length) await refrescarD1(refsD1);
     if (refsMega.length) await refrescarMegaredil(refsMega.slice(0, 10));
-    return { ara_vencidas: araVencidas.length, ara_vencen_hoy: vencenHoy ?? 0, ara, d1: refsD1.length, megaredil: refsMega.length };
+    if (refsTodo.length) await refrescarTodorapidas(refsTodo.slice(0, 10));
+    return { ara_vencidas: araVencidas.length, ara_vencen_hoy: vencenHoy ?? 0, ara, d1: refsD1.length, megaredil: refsMega.length, todorapidas: refsTodo.length };
   });
 
 export function iniciarTareas() {
-  cron.schedule("*/30 * * * *", () => void actualizarD1().catch(() => {}));       // D1 completo cada 30 min
-  cron.schedule("*/5 * * * *", () => void actualizarMegaredil().catch(() => {})); // Megaredil: 8 categorías cada 5 min
-  cron.schedule("*/15 * * * *", () => void revisarVencimientos().catch(() => {})); // vencimientos: cada 15 min
+  cron.schedule("*/30 * * * *", () => void actualizarD1().catch(() => {}));          // D1 completo cada 30 min
+  cron.schedule("*/5 * * * *", () => void actualizarMegaredil().catch(() => {}));    // Megaredil: 8 categorías cada 5 min
+  cron.schedule("2-59/5 * * * *", () => void actualizarTodorapidas().catch(() => {})); // Todorapidas: 8 categorías cada 5 min (desfasado)
+  cron.schedule("*/15 * * * *", () => void revisarVencimientos().catch(() => {}));    // vencimientos: cada 15 min
+  const base = "D1 cada 30 min, Megaredil y Todorapidas cada 5 min, vencimientos cada 15 min";
   if (!araConOcr()) {
-    console.log("[tareas] programadas: D1 cada 30 min, Megaredil cada 5 min, vencimientos cada 15 min (Ara: solo folleto PDF)");
+    console.log(`[tareas] programadas: ${base} (Ara: solo folleto PDF)`);
     return;
   }
-  cron.schedule("15 * * * *", () => void actualizarAra().catch(() => {}));        // Ara: busca folleto nuevo cada hora
-  console.log("[tareas] programadas: D1 cada 30 min, Megaredil cada 5 min, Ara cada hora, vencimientos cada 15 min");
+  cron.schedule("15 * * * *", () => void actualizarAra().catch(() => {}));           // Ara: busca folleto nuevo cada hora
+  console.log(`[tareas] programadas: ${base}, Ara cada hora`);
 }

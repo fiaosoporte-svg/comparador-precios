@@ -2,10 +2,12 @@
 import { db, hoyColombia, refsVencidas } from "./db.js";
 import { refrescarD1 } from "./tiendas/d1.js";
 import { refrescarMegaredil } from "./tiendas/megaredil.js";
+import { refrescarTodorapidas } from "./tiendas/todorapidas.js";
 
 // Cuánto tiempo se considera fresco un dato antes de volver a consultarlo en la tienda
-export const TTL_SEG: Record<string, number> = { d1: 60, megaredil: 600 };
-const MAX_REFS_MEGAREDIL = 4;   // tope de categorías de Megaredil a descargar en vivo por petición
+export const TTL_SEG: Record<string, number> = { d1: 60, megaredil: 600, todorapidas: 600 };
+const EN_VIVO = ["d1", "megaredil", "todorapidas"];
+const MAX_REFS_PARZE = 4;       // tope de categorías de Megaredil / Todorapidas a descargar en vivo por petición
 const MAX_PRODUCTOS_REF = 150;  // categorías "padre" enormes no se descargan en vivo (sus productos están en las hijas)
 const UNIDAD: Record<string, string> = { "100g": "g", "100ml": "ml", unidad: "un" };
 
@@ -44,26 +46,30 @@ export async function preciosCategoria(categoria: string, opciones: { forzar?: b
       .from("productos")
       .select("tienda_id, categoria_tienda_ref")
       .eq("categoria_id", categoria)
-      .in("tienda_id", ["d1", "megaredil"])
+      .in("tienda_id", EN_VIVO)
       .not("categoria_tienda_ref", "is", null);
-    const refs: Record<string, string[]> = { d1: [], megaredil: [] };
+    const refs: Record<string, string[]> = Object.fromEntries(EN_VIVO.map((t) => [t, [] as string[]]));
     for (const f of filas ?? []) if (!refs[f.tienda_id].includes(f.categoria_tienda_ref)) refs[f.tienda_id].push(f.categoria_tienda_ref);
 
-    if (refs.megaredil.length) {
-      const { data: tam } = await db().from("refrescos").select("ref, productos").eq("tienda_id", "megaredil").in("ref", refs.megaredil);
-      const grandes = new Set((tam ?? []).filter((t) => (t.productos ?? 0) > MAX_PRODUCTOS_REF).map((t) => t.ref));
-      const pequenas = refs.megaredil.filter((r) => !grandes.has(r));
-      refs.megaredil = (pequenas.length ? pequenas : refs.megaredil).slice(0, MAX_REFS_MEGAREDIL);
+    // tiendas Parze: las categorías "padre" enormes no se descargan en vivo; tope de categorías por petición
+    for (const t of ["megaredil", "todorapidas"]) {
+      if (!refs[t].length) continue;
+      const { data: tam } = await db().from("refrescos").select("ref, productos").eq("tienda_id", t).in("ref", refs[t]);
+      const grandes = new Set((tam ?? []).filter((x) => (x.productos ?? 0) > MAX_PRODUCTOS_REF).map((x) => x.ref));
+      const pequenas = refs[t].filter((r) => !grandes.has(r));
+      refs[t] = (pequenas.length ? pequenas : refs[t]).slice(0, MAX_REFS_PARZE);
     }
 
-    // 2. refrescar en vivo lo vencido, las dos tiendas en paralelo
+    // 2. refrescar en vivo lo vencido, las tiendas en paralelo
+    const refrescar: Record<string, (refs: string[]) => Promise<number>> = {
+      d1: refrescarD1, megaredil: refrescarMegaredil, todorapidas: refrescarTodorapidas,
+    };
     await Promise.all(
-      (["d1", "megaredil"] as const).map(async (t) => {
+      EN_VIVO.map(async (t) => {
         const vencidas = opciones.forzar ? refs[t] : await refsVencidas(t, refs[t], TTL_SEG[t]);
         if (!vencidas.length) return;
         refrescado[t] = vencidas;
-        if (t === "d1") await refrescarD1(vencidas);
-        else await refrescarMegaredil(vencidas);
+        await refrescar[t](vencidas);
       }),
     );
   }

@@ -17,11 +17,12 @@
 //   GET  /descargar                          página para descargar e instalar la app
 //   GET  /descargas/<archivo>.apk            APK de cada versión
 // Rutas de administración (header x-admin-token: ADMIN_TOKEN):
-//   POST /admin/actualizar/d1 | /admin/actualizar/megaredil?lote=8 | /admin/actualizar/ara?forzar=true
+//   POST /admin/actualizar/d1 | /admin/actualizar/megaredil?lote=8 | /admin/actualizar/todorapidas?lote=8
+//        /admin/actualizar/ara?forzar=true
 import express, { NextFunction, Request, Response } from "express";
 import { db } from "./db.js";
 import { buscarProductos, compararPorCodigo, historial, NoEncontrado, preciosCategoria, productosPorIds, promociones, similares } from "./precios.js";
-import { actualizarAra, actualizarD1, actualizarMegaredil, araConOcr, iniciarTareas, revisarVencimientos } from "./tareas.js";
+import { actualizarAra, actualizarD1, actualizarMegaredil, actualizarTodorapidas, araConOcr, iniciarTareas, revisarVencimientos } from "./tareas.js";
 import { folletoVigente } from "./tiendas/ara.js";
 import { PROGRAMAS } from "./descuentos.js";
 import { CARPETA_DESCARGAS, estadoActualizacion, paginaDescarga } from "./versiones.js";
@@ -155,6 +156,8 @@ app.get("/ara/folleto", app_, async (_req, res) => {
 app.post("/admin/actualizar/d1", admin, async (_req, res) => res.json({ ok: true, resultado: await actualizarD1() }));
 app.post("/admin/actualizar/megaredil", admin, async (req, res) =>
   res.json({ ok: true, resultado: await actualizarMegaredil(Math.min(Number(req.query.lote ?? 8), 30)) }));
+app.post("/admin/actualizar/todorapidas", admin, async (req, res) =>
+  res.json({ ok: true, resultado: await actualizarTodorapidas(Math.min(Number(req.query.lote ?? 8), 30)) }));
 app.post("/admin/actualizar/ara", admin, async (req, res) => {
   if (!araConOcr()) return res.status(409).json({ ok: false, error: "OCR de Ara desactivado (ARA_OCR=true para activarlo; necesita ~600 MB)" });
   res.json({ ok: true, resultado: await actualizarAra(req.query.forzar === "true") });

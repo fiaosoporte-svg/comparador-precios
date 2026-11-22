@@ -1,6 +1,6 @@
 # Comparador de precios Bucaramanga
 
-Compara precios de **D1**, **Megaredil** y **Ara** por categoría y por precio por 100 g / 100 ml / unidad.
+Compara precios de **D1**, **Megaredil**, **Todorapidas** y **Ara** por categoría y por precio por 100 g / 100 ml / unidad.
 
 ```
 App Flutter (Android)  ──x-api-key──►  API Node (Render)  ──service role──►  Supabase (Postgres)
